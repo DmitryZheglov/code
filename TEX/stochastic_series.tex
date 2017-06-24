@@ -1,0 +1,207 @@
+\documentclass[12 pt, russian]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{luainputenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=3cm,bmargin=3cm,lmargin=3cm,rmargin=3cm}
+\usepackage{amstext}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{setspace}
+\usepackage{esint}
+\usepackage{cmap}
+\usepackage[pdftex]{graphicx}
+\usepackage[russian]{babel}
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}{Лемма.}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+\newtheorem{assumption}{Assumption}
+\begin{document}
+\newcounter{TaskBlock}
+\newcounter{TaskTheme}[TaskBlock]
+\newcounter{TaskTask}[TaskTheme]
+\newcommand{\NewBlock}[1]{\refstepcounter{TaskBlock}\section*{\arabic{TaskBlock}. #1}}
+\newcommand{\NewTheme}[1]{\refstepcounter{TaskTheme}\subsection*{\arabic{TaskBlock}.\arabic{TaskTheme}. #1}}
+\newcommand{\num}{\refstepcounter{TaskTask} {\bf \arabic{TaskBlock}.\arabic{TaskTheme}.\arabic{TaskTask}} }
+Итак, наша цель --- найти уровни цен и объемы инструментов для различных моделей рынка 
+\NewBlock{Market Making}
+\NewTheme{Введем обозначения}
+
+\begin{theorem}
+ If we set the volumes of buying and selling $b=s=min\lbrace Ea_s,Eb_b \rbrace $, then $$\frac{z_t}{t}\to c (almost\ surely),\ where\ z_t=\sum_{t=1}^{n}q_t p(q_t)-Q_np(Q_n)\ and \ Q_N=\sum_{t=1}^{n}q_t $$
+ \end{theorem}
+ 
+$$
+q_t=\begin{cases}
+b_s \ is \ volume\   of\ buying\ stocks,&\text{If there is an order for selling}\\
+a_s \ is \ volume \  of\ selling stocks,&\text{If there is an order for buying}
+\end{cases}
+$$
+$$
+p(q_t)=\begin{cases}
+p_b \ is \ bid \ price,&\text{if $q_t=b_b$;}\\
+p_a\ is\ ask \ price,&\text{if $q_t=a_s$.}
+\end{cases}
+$$
+
+
+
+Биржевая книга это балица заявок,отсортированная по ценам сверху вниз
+Z-исходный капитал
+
+ За a($p^a$) и b($p^b$) обозначим размер капитала,который мы выделяем для установки лимит ордеров  на конкретные цены
+
+ limir order заявка,которая хранится в биржевой книге до ее исполнения или отмены заказчиком
+
+ Финансовый инструмент(далее просто инструмент) это акция,валюта,облигация или любой другой товар, который мождо купить и продать.
+
+
+ Общий объем инструмента за время N будем обозначать величину:
+$$Q_N=\sum_{t=1}^{2N}q_t=\sum_{t=1}^N(b_t-a_t)$$
+
+где $q_t$ объем интструмента купленного/проданного в момент времени t.(соответственно с знаком плюс/минус, в четные моменты времени покупае,а в нечетные продаем)\\
+
+Если считать,что в условную единицу времени мы сразу покупаем и продаем,то\\
+$q_{2t}=b_t$\\
+$q_{2t-1}=a_t$\\
+$b_t$---число купленного инстурмента\\
+$a_t$---число проданного инструмента\\
+причем $q_t$ являются н.о.р.с.в.\\
+(в зависимости от удобства использования в задаче будем пользоваться любым определением)\\
+ за доход в течении дня обозначим
+$$z_N=\sum_{t=1}^{2N-1} q_tp_t +Q_Np_N^B=\sum_{t=1}^{N-1}(a_tp_t^a-b_tp_t^b) +Q_N*p_N^B$$где N момент последней операции(при которой мы ликвидируем весь актив $Q_N$ по доступным ценам"best price"( $p_N^B$ =$p_b^B$-лучшая цена для покупки(если $Q_N<0$) и $p_N^B$=$p_a^B$-лучшая цена для продажи)если $Q_N>0$\\
+$p_{2t}=p_t^b$ цена по которой покупаем\\
+$p_{2t-1}=p_t^a$ цена по которой продаем\\
+В зависимости от цен меняются вероятности определенные ниже\\
+
+ Спред будем обозначать $s_t=s=p^a-p^b=p_t^a-p_t^b$ зависит или нет наша функция от времени(могли выбрать постоянные цены и их не менять с течением времени)
+
+ Обозначим за $Z_k=z_N$ доход за k-ый день\\
+
+ $\bar{Y_n}=\frac{1}{n}\sum_{k=1}^nZ_k$(усредненный доход)\\
+
+
+
+\begin{description}
+\item[Найдем среднее объема акций]
+$$EQ_N=E\sum_{t=1}^{N}q_t=\sum_{t=1}^NEq_t=nEq_t=n\sum_{d=1}^{K}d(p_d^B-p_d^A)$$, где\\\
+$p_d^A$=P( придет ордер объема d |пришел маркет ордер на покупку) $\sum_{d=1}^K p_d^A=1$\\
+$p_d^B$=P( придет ордер объема d |пришел маркет ордер на продажу) $\sum_{d=1}^K p_d^B=1$\\
+$\pi^A$=P(пришел маркет ордер на покупку) \\
+$\pi^B$=P(пришел маркет ордер на продажу) \\
+$\pi^B+\pi^A=1$\\
+\end{description}
+
+\begin{description}
+\item[Найдем среднее дохода]
+$Ez_N=E(\sum_{t=1}^{N-1}(a_tp^a-b_tp^b) +Q_Np_N^B)=\sum_{t=1}^{N-1}E(a_tp^a-b_tp^b) +E(Q_Np_N^B)=(N-1)E(a_tp^a-b_tp^b) +E(Q_Np_N^B)=(N-1)(p^aEa_t-p^bEb_t) +p_N^BE(Q_N)=(N-1)(p^a\sum_{d=1}^{K}dp_d^A-p^b\sum_{d=1}^{K}dp_d^B) +p_N^BE(Q_N)$
+\end{description}
+
+\begin{description}
+\item[Найдем вариацию числа акций]
+$Var\ a_t=\sum_{d=1}^Kd^2p_d^A-(\sum_{d=1}^Kdp_d^A)^2$
+$Var\ b_t=\sum_{d=1}^Kd^2p_d^B-(\sum_{d=1}^Kdp_d^B)^2$
+$Var\ (b_t-a_t)=Var\ a_t+Var\ b_t=\sum_{d=1}^Kd^2(p_d^A+p_d^B)-(\sum_{d=1}^Kdp_d^A)^2-(\sum_{d=1}^Kdp_d^B)^2$
+\end{description}
+
+\NewTheme {Условия алгоритма}
+
+1) М.М. не должен накапливать большие позиции,чтобы сильные колебания цен не приносили убыток. Для этого необходимо,чтобы $EQ_N\to 0$ <=> $Eq_t=E(a_t-b_t)=Ea_t-Eb_t\to 0$ <=> $Ea_t=Eb_t$  (т.е. в среднем трейдер должен сколько покупать столько и продавать)
+
+2) Следовательно трейдер должен установить лимит ордера a=b=$min\lbrace Ea_t,Eb_t\rbrace$
+
+3) Для заработка необходимо,чтобы $Ea_t>0\wedge Eb_t>0$(т.е. на нашем уровне цены была ликвидность"происходили торги")
+
+4) Необходимо чтобы s>C=С(d),где C-комиссия биржи(в процентах от объема сделок,обычно 0.001 процентов или конкретная сумма за операцию,например 0.2 рубля за единицу инструмента)
+
+
+
+
+
+
+\begin{theorem}
+При выполнении условий 1-4 следует что $Ez_N\to\infty$
+\end{theorem}
+\begin{description}
+\item[Proof:]
+Вспомним,что\\
+$$Ez_N=(N-1)(p^aEa_t-p^bEb_t) +p_N^BE(Q_N)=(N-1)a(s-C)\underset{N\to\infty}{\longrightarrow}\infty$$
+т.к. по условию a(s-C)>0 и $E|Q_N|=0$\\
+Ч.Т.Д.
+\end{description}
+
+
+\begin{theorem}
+При выполнении условий 1-4 следует что $z_N\to\infty$(п.н.)
+\end{theorem}
+\begin{description}
+\item[Proof:] 
+$\forall v>0$ $$P(|Q_N|\ge v) \le \frac{E|Q_N|}{v}=0  ,$$
+(т.к. $EQ_N=0$)
+из неравенства маркова следует,что вероятность того,что мы накопим большую позицию стремится к нулю почти наверне,значит момент разорения не наступит кроме множества событий нулевой меры.
+\end{description}
+
+
+\begin{theorem}
+ Если $N<\infty$ (т.е.мы совершаем конечное число операий в день), тогда $\bar{Y_n}\to EZ_k$(п.н.)
+ \end{theorem}
+\begin{description}
+\item[Proof:] Т.к $N<\infty$.то увидим по вывединым выше формулам,что $EZ_k=Ez_N<\infty$.Затем применим У.З.Б.Ч.(Колмогорова). значит $\bar{Y_n}\to EZ_k\to\infty$(п.н.).\\
+Ч.Т.Д.
+\end{description}
+
+
+\NewTheme{Оптимизация алгоритма для рынка вовзращающегося в исходное состояние}
+
+Нам было бы желательно иметь капитал\\
+ Z=$ap^a+bp^b=a(p^a+p^b)$(т.к. мы решили установить a=b,одинаковые по объему лимит ордера,чтобы не накапливать больших позиций)\\
+ Если наш капитал C>Z,то следует лишние деньги вложить в другой инструмент.Если С<Z,то нам следует распределить деньги между покупкой и продажей так,чтобы $a'=b'$(где $a'<Ea_t$)
+ Наибольшее значение $z_N$  найдем перебором возможных комбинаций цен и объемов.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}  
+
+
+
+
+
+
+
+
+
+
+
+
+
+

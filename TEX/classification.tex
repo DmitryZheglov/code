@@ -1,0 +1,241 @@
+\documentclass[12 pt, russian]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{luainputenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=3cm,bmargin=3cm,lmargin=3cm,rmargin=3cm}
+\usepackage{amstext}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{setspace}
+\usepackage{esint}
+\usepackage{cmap}
+\usepackage[pdftex]{graphicx}
+\usepackage[russian]{babel}
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}{Лемма.}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+\newtheorem{assumption}{Assumption}
+
+\begin{document}
+
+
+\begin{center} 
+Московский государственный университет им. М. В. Ломоносова \\ 
+Механико-математический факультет \\ 
+Кафедра теории вероятностей \\ 
+\end{center} 
+
+\vspace{200pt} 
+
+\begin{center} 
+\begin{LARGE} {\bf Одномерная задача классификации } \end{LARGE} \\ 
+
+\vspace{25pt} 
+Курсовая работа студента 431 группы \\ 
+Жеглова Дмитрия Андреевича \\ 
+\vspace{\stretch{5}} 
+Москва 2017 \pagebreak
+\end{center}
+\newcounter{TaskBlock}
+\newcounter{TaskTheme}[TaskBlock]
+\newcounter{TaskTask}[TaskTheme]
+\newcommand{\NewBlock}[1]{\refstepcounter{TaskBlock}\section*{\arabic{TaskBlock}. #1}}
+\newcommand{\NewTheme}[1]{\refstepcounter{TaskTheme}\subsection*{\arabic{TaskBlock}.\arabic{TaskTheme}. #1}}
+\newcommand{\num}{\refstepcounter{TaskTask} {\bf \arabic{TaskBlock}.\arabic{TaskTheme}.\arabic{TaskTask}} }
+
+
+
+\NewTheme{Введение}
+Пусть дана выборка $\lbrace(x_1,y_1),...,(x_n,y_n)\rbrace$ - реализация случайной величины:
+$$(x,y);x\in\mathbb{R};y\in\lbrace -1,1 \rbrace$$
+Распределение случайной величины $(x,y)$:\\
+$P(x<t|y=1)=F^+(t)$,\\
+$P(y=1)=p^+$,\\
+$P(x<t|y=-1)=F^-(t)$,\\
+$P(y=-1)=1 - p^+ = p^-$.\\
+Хотим зная только значение $x_i$ определять значение $y_i$, т.е. решать задачу классификации. Для этого по набору $x_i$ построим функцию $f_t(x)\in \lbrace -1,1 \rbrace$ такую что:
+$f_t(x)=\begin{cases}
+1,&\text{если $ x>t$}\\
+-1,&\text{иначе}
+\end{cases} $\\
+Строить $f_t(x)$ будем по алгоритму решающего пня, описание которого есть в \cite{ada}. Это способ разделения массива информации на две части таким образом, чтобы добиться максимально однородных частей.\\
+Определим следующие частоты, которые по закону больших чисел при $n\to\infty$ почти наверное сходятся к предельным распределениям:\\
+$$\dfrac{W_L^+}{W^+} = \dfrac{\sum\limits_{i=1}^{n}I[x_i < t,y_i = 1]}{\sum\limits_{i=1}^{n}I[y_i=1]}\underset{n\to\infty}{\to}F^+(t)p^+$$ 
+
+ $$\dfrac{W_R^+}{W^+} = \dfrac{\sum\limits_{i=1}^{n}I[x_i > t,y_i = 1]}{\sum\limits_{i=1}^{n}I[y_i=1]} \underset{n\to\infty}{\to}(1-F^+(t))p^+$$ 
+
+ $$\dfrac{W_L^-}{W^-} = \dfrac{\sum\limits_{i=1}^{n}I[x_i < t,y_i = -1]}{\sum\limits_{i=1}^{n}I[y_i=-1]}\underset{n\to\infty}{\to}(F^-(t))p^-$$ 
+
+$$\dfrac{W_R^-}{W^-} =  \dfrac{\sum\limits_{i=1}^{n}I[x_i > t,y_i = -1]}{\sum\limits_{i=1}^{n}I[y_i=-1]}\underset{n\to\infty}{\to}(1-F^-(t))p^- $$ 
+\pagebreak
+\NewTheme{Функции качества}
+ Лучшее качество классификации будет при $ E[f_t(x)y] = 1$,когда мы всегда правильно восстанавливаем значение $y$, а худшее при $ E[f_t(x)y] = -1$. Заметим, что если качество $ E[f_t(x)y]<0$, то изменив функцию $f_t(x)$ на $-f_t(x)$ получим качество $ E[f_t(x)y]>0$. Поэтому будем максимизировать не $ E[f_t(x)y] $, а $max(E[f_t(x)y],- E[f_t(x)y])$. Эта величина будет соответстовать точности нашего классификатора.\\
+ Эта задача эквивалентна задаче минимизации функции ошибки: $$Loss = 1-max(E[f_t(x)y],- E[f_t(x)y]) = 1 - |E[f_t(x)y]|$$
+ Распишем математическое ожидание:
+ $$ E[f_t(x)y] = E(I[x>t,y=1]+I[x<t,y=-1]-I[x>t,y=-1]-I[x<t,y=1] = $$ $$P(x>t,y=1)+P(x<t,y=-1)-P(x>t,y=-1)-P(x<t,y=1)=$$
+ $$ (1-F^+)p^+-(1-F^-)p^-+F^-p^--F^+p^+ = p^+(1-2F^+) - p^-(1-2F^-)$$
+ По закону больших чисел  при $n\to\infty$ почти наверное :\\
+  $$\dfrac{\sum\limits_{i=1}^{n}f_t(x_i)y_i}{n}\underset{n\to\infty}{\to}E[f_t(x)y]$$\\
+  
+ Если в задаче классы разделимы одним делением на 2 однородные части, то $$\dfrac{|\sum\limits_{i=1}^{n}f_t(x_i)y_i|}{n} = 1$$
+ Т.е. функция $f_t(x)$ правильно определила все метки классов.\\
+
+  $$\dfrac{\sum\limits_{i=1}^{n}f_t(x_i)y_i}{n} = \dfrac{W^+_R-W^+_L+W^-_L-W^-_R}{W^++W^-}$$
+ Далее будем преполагать, что классы равновероятны, т.е. $p^+=p^-$.\\
+ Тогда $ E[f_t(x)y] = p^+(1-2F^+) - p^-(1-2F^-) = F^- - F^+$
+
+Введем функции расстояния, которые будут показывать степень близости двух произвольных распределений:\\
+1)Коэффициент Бхаттачарья для объектов принадлежащих двум классам: 
+ $$BC = \sqrt{F^+F^-}+\sqrt{(1-F^+)(1-F^-)}$$
+Расстояние Бхаттачарья :\\
+$D_B = -\ln(BC)$\\
+2)Воспользуемся определением из \cite{kl}.Расстояние Кульбака — Лейблера для объектов принадлежащих двум классам:
+	$$KL =   F^+\log(\frac{F^+}{F^-}) + (1-F^+)\log(\frac{(1-F^+)}{(1-F^-)}$$
+    
+Тогда оценим сверху нашу функцию ошибки $Loss = 1-|F^- - F^+|$ функцией BC и будем минимизируя ее, минимизировать и нашу функцию $Loss$.\
+
+\begin{description}
+\item[Замечание 0].\\
+$\forall F^-,F^+$ верно: $1-|F^- - F^+| \leq \sqrt{F^+F^-}+\sqrt{(1-F^+)(1-F^-)}$.\\
+\item[Доказательство]:\\
+Введем обозначения:\\
+$F^+ = x$\\
+$F^- = y$\\
+$1-|y - x| \vee \sqrt{xy}+\sqrt{(1-x)(1-y)}$\\
+Видим, что формулы симметричны относительно $x$ и $y$, поэтому без ограничения общности считаем, что $x>y$.\\
+Так как $\forall x,y \exists k: y = kx$, то перепишем наше сравнение:\\
+$$1-x +kx \vee \sqrt{k}x+\sqrt{1-x-kx+x^2k}$$
+$$1-x +kx - \sqrt{k}x \vee \sqrt{1-x-kx+x^2k}$$
+$$(1-x +kx - \sqrt{k}x)^2 \vee 1-x-kx+x^2k$$
+$$1-2x +x^2 - 2\sqrt{k}x+2kx+2\sqrt{k}x^2-kx^2+k^2x^2-2k^{3/2}x^2 \vee 1-x-kx+x^2k$$
+$$-x +x^2 - 2\sqrt{k}x+3kx+2\sqrt{k}x^2-2kx^2+k^2x^2-2k^{3/2}x^2 \vee 0$$
+$$x(x+ \dfrac{3k^{1/2}+1}{k^{3/2}-k-3k^{1/2}-1}) \vee 0$$
+$$\dfrac{3k^{1/2}+1}{k^{3/2}-k-3k^{1/2}-1}) \vee -1$$
+$$3k^{1/2}+1 \vee 1-k^{3/2}+k+3k^{1/2}$$
+$$0 \vee k-k^{3/2}$$
+$$0 \vee k(1-k^{1/2})$$
+т.к. $x>y = kx>0$, то $0<k<1$, значит
+$$0 \leq k(1-k^{1/2})$$
+ч.т.д.
+\end{description}
+
+Мы всегда может свести задачу от двух произвольных распределений $F^+$\ и $F^-$\ к одному равномерному на [0,1] и еще некоторому распределению $G(F^-)$, где $G=(F^+)^{-1}$. Поэтому cначала найдем оптимальный $t^*$\ для двух равномерных распределений.
+\begin{theorem}
+  Для распределений $F^+(t) =\begin{cases}
+\dfrac{t-a}{b-a},&\text{если $\ t \in [a,b]$}\\
+0,&\text{иначе}
+\end{cases} $\ и \\$F^-(t) =\begin{cases}
+\dfrac{t-c}{d-c}&\text{если$\ t \in [c,d]$}\\
+0&\text{иначе}
+\end{cases} $ и пусть $a<c$, тогда\\
+по расстоянию Бхаттачарья оптимальным значением для $t$\ будет $t^* = \dfrac{ad-bc}{a-b-c+d} $, если $b-a<d-c$ и $c<b$
+ \end{theorem}
+ \begin{description}
+\item[Proof:] 
+Чтобы расстояние Бхаттачарья было максимальным, необходимо чтобы коэффициент Бхаттачарья был минимален, поэтому будем искать минимумы функции коэффициента Бхаттачарья\\ 
+Возьмем производную и приравняем к нулю\\
+$BC'_t =  0 \Leftrightarrow \dfrac{(a+c-2t)}{\sqrt{(a-t)(c-t)}} = \dfrac{2t-b-d}{\sqrt{(b-t)(d-t)}} $\\
+Разрешим относительно t и получим возможные экстремумы:\\
+
+$t^*_1 = \dfrac{ab-cd}{a+b-c+d}$,\\
+$t^*_2 = \dfrac{ad-bc}{a-b-c+d}$\\
+Проверим является ли максимумом первая точка:\\
+$$BC''_{tt}(t^*_1) = $$
+$$-\dfrac{(a-c)^2(\sqrt{\dfrac{(a-c)^2(c-b)(a-d)}{(a-b)(a+b-c-d)^2(c-d)}}+\sqrt{\dfrac{(c-b)(a-d)(b-d)^2}{(a-b)(a+b-c-d)^2(c-d)}})}{4(a-b)^2(\dfrac{(c-b)(a-d)(b-d)^2}{(a-b)(a+b-c-d)^2(c-d)})^{3/2}\sqrt{\dfrac{(c-b)(a-d)(b-d)^2}{(a-b)(a+b-c-d)^2(c-d)}}(c-d)^2}$$ 
+Т.к. $BC''_{tt}(t^*_1)<0$, то $t^*_1$\ является максимумом. Значит это точка нам не подходит\\
+Рассмотрим вторую точку:\\
+$$BC''_{tt}(t^*_2) = $$ 
+$$\dfrac{(a-b+c-d)((b-d)\sqrt{\dfrac{(a-c)^2}{(a-b-c+d)^2}}+(a-c)\sqrt{\dfrac{(b-d)^2}{(a-b-c+d)}})}{2(b-a)(b-a-d+c)(d-c)\sqrt{\dfrac{(a-c)^2}{(a-b-c+d)^2}}\sqrt{\dfrac{(b-d)^2}{(a-b-c+d)^2}}}$$ 
+Тогда $BC''_{tt}(t^*_2)<0 \Leftrightarrow b-a<d-c$\\
+Т.е. является максимумом, когда первый отрезок короче второго.\\
+ч.т.д.
+\end{description}
+
+\begin{description}
+\item[Замечание 1]
+Если в условиях Теоремы1 b-a>d-c, тогда оптимальным значением для t будет $t^*=c$\\
+Т.к. на отрезке пересечения [a,b] и [c,d] нет точек минимума по доказанной выше теореме, то минимум достигается в краях отрезка [c,b]. Посчитаем значение функции в этих точках.\\
+$BC(c) = \sqrt{\dfrac{b-c}{b-a}}$\\
+$BC(b) = \sqrt{\dfrac{b-c}{d-c}}$\\
+BC(c) < BC(b) т.к.b-a>d-c по условию. А значит точка минимума будет $t^* = c$
+
+\end{description}
+
+\begin{description}
+\item[Замечание 2]
+Если в условиях Теоремы1 отрезки [a,b] и [c,d] не пересекаются т.е. b<c, тогда на отрезке [b,c] функция Бхаттачарья постоянна. \\
+На отрезке [c,d] функция имеет вид $\sqrt{\dfrac{d-t}{d-c}}$ и минимальное значение будет при t=d\\
+На отрезке [a,b] функция имеет вид $\sqrt{\dfrac{b-t}{b-a}}$ и минимальное значение будет при t=b
+
+\end{description}
+
+\begin{theorem}
+  Для распределений $F^+(t) =\begin{cases}
+\dfrac{t-a}{b-a},&\text{если$\ t \in [a,b]$}\\
+0,&\text{иначе}
+\end{cases} $ и\\ $F^-(t) =\begin{cases}
+\dfrac{t-c}{d-c}&\text{если$\ t \in [c,d]$}\\
+0&\text{иначе}
+\end{cases} $ и пусть $a<c$, тогда\\ для расстояния Кульбака — Лейблера  оптимальным разделением будет $t^* = \dfrac{ad-bc}{a-b-c+d}$, если $b<d $.
+ \end{theorem}
+ \begin{description}
+\item[Proof:] 
+Пусть $F^+(t) = x, F^-(t)=y$\\
+$KL(t) = -x\ln(\dfrac{x}{y}) - (1-x)\ln(\dfrac{1-x}{1-y}) $\\
+Возьмем производную, приравняем к нулю, упростим и получим\\
+$\dfrac{b-t}{d-t} - ln(\dfrac{b-t}{d-t}) = \dfrac{t-a}{t-c} -ln(\dfrac{t-a}{t-c}) $\\
+уравнение не разрешимо в простейших, но угадывается одно из решений, а именно:\\
+$\dfrac{b-t}{d-t} = \dfrac{t-a}{t-c}$\\
+откуда получим\\
+$(t-c)(b-t) = (t-a)(d-t)$\\
+решим относительно t:\\
+$t^* = \dfrac{cb-ad}{(b+c)-(d+a)}$\\
+$$KL''_{tt}(t^*) = -\dfrac{(a-b-c+d)^4}{(a-b)^2(a-c)(b-d)(c-d)^2}$$
+Т.к. $KL''_{tt}(t^*)<0$ , то эта точка является точкой максимума, а значит оптимальна.\\
+ч.т.д.
+\end{description}
+
+\begin{description}
+\item[Замечание 3]
+Если в условиях Теоремы2 отрезки $b>d$, тогда $KL''_{tt}(t^*)>0$, а значит найденная точка является минимумом, что нам не подходит. \\
+Т.к. на отрезке пересечения [a,b] и [c,d] нет точек максимума по доказанной выше теореме, то максимум достигается в краях отрезка [c,b]. Посчитаем значение функции в этих точках.\\
+$KL(c) = \infty$\\
+$KL(b) = \log{\dfrac{d-c}{b-c}}, $\\
+KL(c) > KL(b) . А значит точка максимума будет $t^* = c$
+
+\end{description}
+
+
+
+
+
+
+
+
+
+\renewcommand{\bibname}{?????? ??????????}
+\begin{thebibliography}{15}
+\bibitem{ada} Michael Kearns, Yishay Mansour, \textit{On the Boosting Ability of Top-Down Decision Tree Learning Algorithms.}. Tel-Aviv University,  1996.
+
+\bibitem{kl}Robert E. Schapire, Yoav Freund,\textit{ Boosting: Foundations and Algorithms}. 163-165, 2011.
+\end{thebibliography}
+\end{document}
+

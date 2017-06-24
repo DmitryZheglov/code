@@ -1,0 +1,272 @@
+
+
+```{r, echo=FALSE , warning=FALSE, message=FALSE}
+library(datasets)
+library(fBasics)
+library("ghyp")
+library("pander")
+library(copula)
+library(FinTS)
+library(tseries)
+library(fGarch)
+library("ggplot2")
+library(evd) #распределение максим на основе GEV
+library (np) #Ядерные оценки
+
+file <- read.csv("C:/R/6/returns_train.csv")
+file <- file[,1]
+             
+zad <- numeric()
+j <- 1
+for (i in 1:length(file)){
+  if (file[i]<0) {
+    zad[j] <- file[i]
+    j <- j+1
+  }
+}
+zad <- numeric()
+zad <- file
+T <- length(zad)
+```
+
+```{r, include=FALSE}
+#graf <- numeric()
+#for(i in 1:200){
+#  graf[i] <- 0
+#}
+#k <- 1
+#for(i in 1:T){
+#  graf[k] <- graf[k]+zad[i]
+#  if (round((i/5))==(i/5)){
+#    k <- k+1
+#  }
+#}
+```
+
+```{r}
+hist(zad, nclass=120, probability=TRUE)
+
+#Простая непараметрическая оценка плотности
+L <- 10^4
+N <- length(zad)
+h <- 0.01 # ширина интервала
+
+# в точках х будет оцениваться плотность
+x <- seq(-0.12, 0.04, length=L) # последовательность длины L
+f.naive <- numeric() # нулевой (пока) вектор оценок
+
+# считаем количество элементов в интервалах x_i ± h/2
+for (i in 1:L) {
+   f.naive[i] <- sum(1*((zad>x[i]-h/2)&(zad<x[i]+h/2)))
+}
+f.naive <- f.naive/(N*h) # нормируем оценку
+
+#График простой оценки
+plot(x, f.naive,type="l",main="Naive estimate",xlab="zad",ylab="Density", lwd="2")
+
+rug(zad,col=3)
+
+
+#Ядерные оценки
+f.fix <- npudens(tdat=zad, edat=x, ckertype="gaussian", bwtype="fixed")
+
+#Адаптивный метод с lambda_i
+pilot <- npudens(tdat=zad,ckertype="gaussian",bwtype="fixed")
+h <- pilot$bws$bw # оценка глобальной составляющей интервала
+
+# среднегеометрическое пилотных оценок
+g <- 1
+for (i in 1:N) g <- g*pilot$dens[i]^(1/N)
+
+# расчёт локальной концентрации наблюдений
+alpha <- 0.5
+lambda <- (g/pilot$dens)^alpha
+kern <- function(u) exp(-u^2/2)/sqrt(2*pi) # ядро Гаусса
+
+# расчёт оценок плотности
+f <- numeric(L)
+for (i in 1:L) {
+ for (j in 1:N) f[i] <- f[i] + kern((x[i]-zad[j])/(h*lambda[j]))/(h*lambda[j])
+ f[i] <- f[i]/N
+}
+
+plot(x, f.fix$dens, type="l", main="Gaussian kernel, fixed bandwidth", xlab="zad",ylab="Density")
+
+#Сравнение адаптивной и фиксированной оценок
+plot(x,f.fix$dens,type="l",lty="dashed",ylim=c(0,25), main="Fixed and adaptive estimates", xlab="zad",ylab="Density")
+lines(x,f)
+
+#Значения логарифмической функции правдоподобия:
+dx <- x[2]-x[1]
+llh.fix <- sum(log(f.fix$dens[round((zad-x[1])/dx)+1]))
+llh.ada <- sum(log(f[round((zad-x[1])/dx)+1]))
+```
+
+llh.fix = `r llh.fix`
+
+llh.ada = `r llh.ada`
+
+```{r}
+#Нахождение квантилей оценки распределения:
+# оценка функции распределения
+F.fix <- npudist(tdat=zad,edat=x,ckertype="gaussian",bwtype="fixed")
+
+# для адаптивного варианта
+F <- rep(0,times=L)
+for (i in 1:L) {
+  F[i] <- sum(f[1:i])*dx
+}
+```
+
+# 99%
+
+```{r}
+# поиск квантиля методом деления пополам
+alpha <- 0.01
+a <- 1
+b <- L
+ab <- trunc((a+b)/2)
+while ((b-a)>2) {
+ if (F.fix$dist[ab]<=alpha) a <- ab
+ if (F.fix$dist[ab]>=alpha) b <- ab
+ ab <- trunc((a+b)/2)
+}
+q.fix_1 <- x[ab]
+
+a <- 1
+b <- L
+ab <- trunc((a+b)/2)
+while ((b-a)>2) {
+ if (F[ab]<=alpha) a <- ab
+ if (F[ab]>=alpha) b <- ab
+ ab <- trunc((a+b)/2)
+}
+q.ada_1 <- x[ab]
+
+k1 <- c(0,0)
+for (i in 1:T){
+  if (zad[i]<=q.fix_1) k1[1]<-k1[1]+1
+  if (zad[i]<=q.ada_1) k1[2]<-k1[2]+1
+}
+k1 <- k1/1000*100
+
+pre_1 <- numeric()
+j <- 1
+for (i in 1:T){
+  if (zad[i]<=q.fix_1) {
+    pre_1[j] <- zad[i]
+    j <- j+1
+  }
+}
+```
+
+# 95%
+
+```{r}
+# поиск квантиля методом деления пополам
+alpha <- 0.05
+a <- 1
+b <- L
+ab <- trunc((a+b)/2)
+while ((b-a)>2) {
+ if (F.fix$dist[ab]<=alpha) a <- ab
+ if (F.fix$dist[ab]>=alpha) b <- ab
+ ab <- trunc((a+b)/2)
+}
+q.fix_2 <- x[ab]
+
+a <- 1
+b <- L
+ab <- trunc((a+b)/2)
+while ((b-a)>2) {
+ if (F[ab]<=alpha) a <- ab
+ if (F[ab]>=alpha) b <- ab
+ ab <- trunc((a+b)/2)
+}
+q.ada_2 <- x[ab]
+
+k2 <- c(0,0)
+for (i in 1:T){
+  if (zad[i]<=q.fix_2) k2[1]<-k2[1]+1
+  if (zad[i]<=q.ada_2) k2[2]<-k2[2]+1
+}
+k2 <- k2/1000*100
+
+pre_2 <- numeric()
+j <- 1
+for (i in 1:T){
+  if (zad[i]<=q.fix_2) {
+    pre_2[j] <- zad[i]
+    j <- j+1
+  }
+}
+```
+
+# 90%
+
+```{r}
+# поиск квантиля методом деления пополам
+alpha <- 0.1
+a <- 1
+b <- L
+ab <- trunc((a+b)/2)
+while ((b-a)>2) {
+ if (F.fix$dist[ab]<=alpha) a <- ab
+ if (F.fix$dist[ab]>=alpha) b <- ab
+ ab <- trunc((a+b)/2)
+}
+q.fix_3 <- x[ab]
+
+a <- 1
+b <- L
+ab <- trunc((a+b)/2)
+while ((b-a)>2) {
+ if (F[ab]<=alpha) a <- ab
+ if (F[ab]>=alpha) b <- ab
+ ab <- trunc((a+b)/2)
+}
+q.ada_3 <- x[ab]
+
+k3 <- c(0,0)
+for (i in 1:T){
+  if (zad[i]<=q.fix_3) k3[1]<-k3[1]+1
+  if (zad[i]<=q.ada_3) k3[2]<-k3[2]+1
+}
+k3 <- k3/1000*100
+
+pre_3 <- numeric()
+j <- 1
+for (i in 1:T){
+  if (zad[i]<=q.ada_3) {
+    pre_3[j] <- zad[i]
+    j <- j+1
+  }
+}
+```
+
+Итоговые результаты (VaR и ES) для всех трех уровней: 
+ 
+#99% 
+
+VaR = `r q.fix_1`
+
+ES  = `r mean(pre_1)`
+
+#95%
+
+VaR = `r q.fix_2`
+
+ES  = `r mean(pre_2)`
+
+#90%
+
+VaR = `r q.ada_3`
+
+ES  = `r mean(pre_3)`
+
+```{r, echo=FALSE}
+result <- matrix(nrow=3, ncol=2)
+result[,1] <- c(q.fix_1, q.fix_2, q.ada_3)
+result[,2] <- c(mean(pre_1), mean(pre_2), mean(pre_3))
+
+```

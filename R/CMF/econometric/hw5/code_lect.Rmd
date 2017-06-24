@@ -1,0 +1,141 @@
+```{r}
+library(datasets)
+library(fBasics)
+library("ghyp")
+library("pander")
+library(copula)
+library(FinTS)
+library(tseries)
+library(fGarch)
+library("ggplot2")
+library(evd) #распределение максим на основе GEV
+```
+
+# загрузка данных
+sber <- read.csv("C:/R/4/SBER.csv")
+sber <- sber[,5]
+n <- 50
+m <- 15
+T <- m*n
+sber <- sber[2:(T+1)]/sber[1:T]-1
+plot(sber, type="l")
+
+#расчёт максим
+Mn <- rep(0,times=m)
+for (i in 1:m) Mn[i] <- max(sber[((i-1)*n+1):(i*n)])
+
+# распределение максим на основе GEV
+Mn.fit <- fgev(Mn)
+#plot(Mn.fit)
+
+# пороговый и средний период наступления события
+mu <- Mn.fit$estimate[1] 
+sigma <- Mn.fit$estimate[2]
+xi <- Mn.fit$estimate[3]
+k <- 5
+u <- 0.05
+r.nk <- mu+sigma/xi*((-log(1-1/k))^(-xi)-1)
+k.nr <- 1/(1-pgev(u,loc=mu,scale=sigma,shape=xi))
+
+#GPD в R
+#пороговое значение - 95% квантиль
+u <- sort(sber)[0.95*T]
+gpd.fit <- fpot(sber,threshold=u,model="gpd",method="SANN")
+
+# оценки параметров
+beta <- gpd.fit$estimate[1] 
+xi <- gpd.fit$estimate[2]
+
+# расчёт мер риска
+Fu <- gpd.fit$pat
+alpha <- 1-1/250 
+#alpha соответствует k = 5
+VaR <- u+beta/xi*(((1-alpha)/Fu)^(-xi)-1)
+ES <- (VaR+beta-xi*u)/(1-xi)
+
+##############
+
+#МНОГОМЕРНЫЙ СЛУЧАЙ
+
+##############
+
+# загрузка данных
+vtbr <- read.csv("C:/R/4/VTBR.csv")
+vtbr <- vtbr[,5]
+vtbr <- vtbr[2:(T+1)]/vtbr[1:T]-1
+ESM <- cbind(sber, vtbr)
+
+# расчёт максим
+Mn <- rep(0,times=m*2)
+dim(Mn) <- c(m,2)
+for (i in 1:2) {
+ for (j in 1:m)
+Mn[j,i] <- max(ESM[((j-1)*n+1):(j*n),i])
+}
+
+# частные распределения на основе GED
+fit1 <- fgev(Mn[,1])
+fit2 <- fgev(Mn[,2])
+
+# экстремальные копулы
+gumb.cop <- gumbelCopula(2)
+gal.cop <- galambosCopula(2)
+
+# значения частных функций распределения
+cdf1 <- pgev(Mn[,1], loc=fit1$estimate[1], scale=fit1$estimate[2], shape=fit1$estimate[3])
+cdf2 <- pgev(Mn[,2], loc=fit2$estimate[1], scale=fit2$estimate[2], shape=fit2$estimate[3])
+cdf <- cbind(cdf1,cdf2)
+
+# подгонка копулы
+gumb.fit <- fitCopula(cdf,copula=gumb.cop)
+gal.fit <- fitCopula(cdf,copula=gal.cop)
+
+# модельные значения максим
+N <- 10^5
+cdf.sim <- rcopula(n=N,copula=gal.fit@copula)
+sim1 <- qgev(cdf.sim[,1], loc=fit1$estimate[1], scale=fit1$estimate[2], shape=fit1$estimate[3])
+sim2 <- qgev(cdf.sim[,2], loc=fit2$estimate[1], scale=fit2$estimate[2], shape=fit2$estimate[3])
+
+# модельные убытки
+w <- c(0.5,0.5)
+loss <- sort(w[1]*sim1+w[2]*sim2)
+
+# расчёт мер риска
+k <- 4
+alpha <- 1-1/k
+VaR <- loss[alpha*N]
+ES <- mean(loss[(alpha*N+1):N])
+
+#Превышение многомерного порога
+# выборка значений, превышающих многомерный порог
+u <- c(sort(sber)[0.9*T], sort(vtbr)[0.9*T])
+t.ESM <- ESM[(ESM[,1]>u[1])&(ESM[,2]>u[2]),]
+
+# частные распределения на основе GED
+fit1 <- fpot(t.ESM[,1], threshold=u[1], model="gpd", method="SANN")
+fit2 <- fpot(t.ESM[,2], threshold=u[2], model="gpd", method="SANN")
+
+# значения частных функций распределения
+cdf1 <- pgpd(t.ESM[,1],loc=u[1], scale=fit1$par[1], shape=fit1$par[2])
+cdf2 <- pgpd(t.ESM[,2],loc=u[2], scale=fit2$par[1], shape=fit2$par[2])
+cdf <- cbind(cdf1,cdf2)
+
+# подгонка копулы
+gumb.fit <- fitCopula(cdf,copula=gumb.cop)
+gal.fit <- fitCopula(cdf,copula=gal.cop)
+
+# модельные значения убытков
+cdf.sim <- rCopula(n=N,copula=gal.fit@copula)
+sim1 <- qgpd(cdf.sim[,1], loc=u[1], scale=fit1$par[1], shape=fit1$par[2])
+sim2 <- qgpd(cdf.sim[,2], loc=u[2], scale=fit2$par[1], shape=fit2$par[2])
+
+# убытки по портфелю
+loss <- sort(w[1]*sim1+w[2]*sim2)
+
+# расчёт мер риска
+Fu <- nrow(t.ESM)/T
+alpha <- 1-1/(250*Fu)
+VaR <- loss[alpha*N]
+ES <- mean(loss[(alpha*N+1):N])
+
+

@@ -1,0 +1,279 @@
+
+  Сделаем одномерно, представляя все 5 задолженностей в каждый момент времени t, как одну большую задолженность.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(datasets)
+library(fBasics)
+library("ghyp")
+library("pander")
+library(copula)
+library(FinTS)
+library(tseries)
+library(fGarch)
+library("ggplot2")
+library(evd) #распределение максим на основе GEV
+```
+
+```{r}
+# загрузка данных
+file <- read.csv("C:/R/5/loss_train.csv")
+
+zad <- numeric()
+T <- length(file[,1])
+
+for (i in 1:T){
+  zad[i] <- sum(file[i,])
+}
+
+n <- 1
+m <- 1000
+T <- m*n
+
+#расчёт максим
+Mn <- rep(0,times=m)
+for (i in 1:m) Mn[i] <- max(zad[((i-1)*n+1):(i*n)])
+```
+
+```{r}
+# распределение максим на основе GEV
+```
+```{r,echo=FALSE, message=FALSE}
+Mn.fit <- fgev(Mn)
+plot(Mn.fit)
+```
+
+```{r}
+# пороговый и средний период наступления события
+mu <- Mn.fit$estimate[1] 
+sigma <- Mn.fit$estimate[2]
+xi <- Mn.fit$estimate[3]
+
+k_0.01 <- 100/n
+k_0.05 <- 20/n
+k_0.10 <- 10/n
+
+r.nk_0.01 <- mu+sigma/xi*((-log(1-1/k_0.01))^(-xi)-1)
+r.nk_0.05 <- mu+sigma/xi*((-log(1-1/k_0.05))^(-xi)-1)
+r.nk_0.10 <- mu+sigma/xi*((-log(1-1/k_0.10))^(-xi)-1)
+
+result_1 <- c(r.nk_0.01, r.nk_0.05, r.nk_0.10)
+```
+
+result:
+
+`r pander(result_1)`
+
+```{r}
+u <- sort(zad)[0.95*T]
+gpd.fit <- fpot(zad,threshold=u,model="gpd",method="SANN")
+beta <- gpd.fit$estimate[1]
+xi <- gpd.fit$estimate[2]
+Fu <- gpd.fit$pat
+
+alpha <- 1-1/100
+VaR_0.01 <- u+beta/xi*(((1-alpha)/Fu)^(-xi)-1)
+
+alpha <- 1-1/20
+VaR_0.05 <- u+beta/xi*(((1-alpha)/Fu)^(-xi)-1)
+
+alpha <- 1-1/10
+VaR_0.10 <- u+beta/xi*(((1-alpha)/Fu)^(-xi)-1)
+
+result_2 <- c(VaR_0.01, VaR_0.05, VaR_0.10) 
+```
+
+result:
+
+`r pander(result_2)`
+
+
+#Многомерный случай
+
+
+```{r}
+# загрузка данных
+file <- read.csv("C:/R/5/loss_train.csv")
+
+zad1 <- file[,1]
+zad2 <- file[,2]
+zad3 <- file[,3]
+zad4 <- file[,4]
+zad5 <- file[,5]
+
+ESM <- cbind(zad1, zad2, zad3, zad4, zad5)
+
+n <- 10
+m <- 100
+T <- m*n
+
+# расчёт максим
+Mn <- rep(0,times=m*5)
+dim(Mn) <- c(m,5)
+for (i in 1:5) {
+ for (j in 1:m)
+Mn[j,i] <- max(ESM[((j-1)*n+1):(j*n),i])
+}
+
+# частные распределения на основе GED
+fit1 <- fgev(Mn[,1])
+fit2 <- fgev(Mn[,2])
+fit3 <- fgev(Mn[,3])
+fit4 <- fgev(Mn[,4])
+fit5 <- fgev(Mn[,5],std.err=FALSE)
+
+# экстремальные копулы
+gumb.cop <- gumbelCopula(param=2, dim=5)
+
+
+# значения частных функций распределения
+cdf1 <- pgev(Mn[,1], loc=fit1$estimate[1], scale=fit1$estimate[2], shape=fit1$estimate[3])
+cdf2 <- pgev(Mn[,2], loc=fit2$estimate[1], scale=fit2$estimate[2], shape=fit2$estimate[3])
+cdf3 <- pgev(Mn[,3], loc=fit4$estimate[1], scale=fit3$estimate[2], shape=fit3$estimate[3])
+cdf4 <- pgev(Mn[,4], loc=fit4$estimate[1], scale=fit4$estimate[2], shape=fit4$estimate[3])
+cdf5 <- pgev(Mn[,5], loc=fit5$estimate[1], scale=fit5$estimate[2], shape=fit5$estimate[3])
+cdf <- cbind(cdf1,cdf2,cdf3,cdf4,cdf5)
+
+# подгонка копул
+gumb.fit <- fitCopula(cdf,copula=gumb.cop, method = "itau")
+
+# модельные значения максим
+N <- 10^5
+cdf.sim <- rCopula(n=N,copula=gumb.fit@copula) 
+sim1 <- qgev(cdf.sim[,1],loc=fit1$estimate[1], scale=fit1$estimate[2],shape=fit1$estimate[3])
+sim2 <- qgev(cdf.sim[,2],loc=fit2$estimate[1], scale=fit2$estimate[2],shape=fit2$estimate[3])
+sim3 <- qgev(cdf.sim[,3],loc=fit3$estimate[1], scale=fit3$estimate[2],shape=fit3$estimate[3])
+sim4 <- qgev(cdf.sim[,4],loc=fit4$estimate[1], scale=fit4$estimate[2],shape=fit4$estimate[3])
+sim5 <- qgev(cdf.sim[,5],loc=fit5$estimate[1], scale=fit5$estimate[2],shape=fit5$estimate[3])
+
+# модельные убытки
+loss <- sort(sim1+sim2+sim3+sim4+sim5)
+
+# расчёт мер риска
+k <- 100
+alpha <- 1-1/k
+VaR_0.01 <- loss[alpha*N]
+ES <- mean(loss[(alpha*N+1):N])
+
+k <- 20
+alpha <- 1-1/k
+VaR_0.05 <- loss[alpha*N]
+ES <- mean(loss[(alpha*N+1):N])
+
+k <- 10
+alpha <- 1-1/k
+VaR_0.10 <- loss[alpha*N]
+ES <- mean(loss[(alpha*N+1):N])
+
+result_3 <- c(VaR_0.01, VaR_0.05, VaR_0.10)
+```
+
+result:
+
+`r pander(result_3)`
+
+
+#Превышение многомерного порога в R
+
+
+```{r}
+# выборка значений, превышающих многомерный порог
+u <- c(sort(zad1)[0.8*T], sort(zad2)[0.8*T], sort(zad3)[0.8*T], sort(zad4)[0.8*T], sort(zad5)[0.8*T])
+t.ESM <- ESM[(ESM[,1]>u[1])&(ESM[,2]>u[2])&(ESM[,3]>u[3])&(ESM[,4]>u[4])&(ESM[,5]>u[5]),]
+
+# частные распределения на основе GED
+fit1 <- fpot(t.ESM[,1],threshold=u[1], model="gpd",method="SANN")
+fit2 <- fpot(t.ESM[,2],threshold=u[2], model="gpd",method="SANN")
+fit3 <- fpot(t.ESM[,3],threshold=u[3], model="gpd",method="SANN")
+fit4 <- fpot(t.ESM[,4],threshold=u[4], model="gpd",method="SANN")
+fit5 <- fpot(t.ESM[,5],threshold=u[5], model="gpd",method="SANN")
+
+# значения частных функций распределения
+cdf1 <- pgpd(t.ESM[,1],loc=u[1],scale=fit1$par[1], shape=fit1$par[2])
+cdf2 <- pgpd(t.ESM[,2],loc=u[2],scale=fit2$par[1], shape=fit2$par[2])
+cdf3 <- pgpd(t.ESM[,3],loc=u[3],scale=fit2$par[1], shape=fit2$par[2])
+cdf4 <- pgpd(t.ESM[,4],loc=u[4],scale=fit2$par[1], shape=fit2$par[2])
+cdf5 <- pgpd(t.ESM[,5],loc=u[5],scale=fit2$par[1], shape=fit2$par[2])
+cdf <- cbind(cdf1,cdf2,cdf3,cdf4,cdf5)
+
+# подгонка копулы
+gumb.fit <- fitCopula(cdf,copula=gumb.cop,method="itau")
+
+# модельные значения убытков
+cdf.sim <- rCopula(n=N,copula=gumb.fit@copula)
+sim1 <- qgpd(cdf.sim[,1],loc=u[1],scale=fit1$par[1], shape=fit1$par[2])
+sim2 <- qgpd(cdf.sim[,2],loc=u[2],scale=fit2$par[1], shape=fit2$par[2])
+sim3 <- qgpd(cdf.sim[,3],loc=u[3],scale=fit3$par[1], shape=fit3$par[2])
+sim4 <- qgpd(cdf.sim[,4],loc=u[4],scale=fit4$par[1], shape=fit4$par[2])
+sim5 <- qgpd(cdf.sim[,5],loc=u[5],scale=fit5$par[1], shape=fit5$par[2])
+
+# убытки по портфелю
+loss <- sort(sim1+sim2+sim3+sim4+sim5)
+
+# расчёт мер риска
+Fu <- nrow(t.ESM)/T
+alpha <- 1-1/(100*Fu)
+VaR_0.01 <- loss[alpha*N]
+ES <- mean(loss[(alpha*N+1):N])
+
+Fu <- nrow(t.ESM)/T
+alpha <- 1-1/(20*Fu)
+   #alpha < 0
+
+Fu <- nrow(t.ESM)/T
+alpha <- 1-1/(10*Fu)
+   #alpha < 0
+
+result_4 <- c(VaR_0.01, NA, NA)
+```
+
+result:
+
+`r result_4`
+
+  
+# Проверим два полученных результата на данном файле
+
+
+
+```{r}
+file <- read.csv("C:/R/5/loss_train.csv")
+
+zad <- numeric()
+T <- length(file[,1])
+
+for (i in 1:T){
+  zad[i] <- sum(file[i,])
+}
+
+k1 <- c(0,0,0)
+for (i in 1:1000) {
+  if (zad[i] > result_1[1]) k1[1] <- k1[1]+1
+   if (zad[i] > result_1[2]) k1[2] <- k1[2]+1
+    if (zad[i] > result_1[3]) k1[3] <- k1[3]+1
+}
+k1 <- k1/1000*100
+
+k2 <- c(0,0,0)
+for (i in 1:1000) {
+  if (zad[i] > result_2[1]) k2[1] <- k2[1]+1
+   if (zad[i] > result_2[2]) k2[2] <- k2[2]+1
+    if (zad[i] > result_2[3]) k2[3] <- k2[3]+1
+}
+k2 <- k2/1000*100
+
+k3 <- c(0,0,0)
+for (i in 1:1000) {
+  if (zad[i] > result_3[1]) k3[1] <- k3[1]+1
+   if (zad[i] > result_3[2]) k3[2] <- k3[2]+1
+    if (zad[i] > result_3[3]) k3[3] <- k3[3]+1
+}
+k3 <- k3/1000*100
+```
+
+
+Значит, как ни странно, лучше всего описывает одномерный метод(С использованием распределения Парето)
+
+
+
+
+
